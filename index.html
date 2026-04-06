@@ -1,0 +1,1192 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>hana 채널 분석</title>
+  <style>
+    :root {
+      --bg: #efede8;
+      --panel: #f7f5f1;
+      --panel-2: #fbfaf8;
+      --line: rgba(17,17,17,0.08);
+      --text: #111111;
+      --sub: rgba(17,17,17,0.56);
+      --accent: #f26522;
+      --accent-hover: #da5719;
+      --shadow: 0 10px 30px rgba(0,0,0,0.04);
+      --radius-xl: 30px;
+      --radius-lg: 22px;
+      --radius-md: 16px;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background: linear-gradient(180deg, #f2f0eb 0%, #ece8e2 100%);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Pretendard", "Segoe UI", sans-serif;
+      letter-spacing: -0.03em;
+    }
+
+    .page {
+      max-width: 1320px;
+      margin: 0 auto;
+      padding: 28px 28px 64px;
+    }
+
+    .topbar {
+      display: grid;
+      grid-template-columns: 1fr auto auto;
+      gap: 16px;
+      align-items: end;
+      margin-bottom: 18px;
+    }
+
+    .brand {
+      font-size: clamp(44px, 7vw, 96px);
+      line-height: 0.9;
+      font-weight: 800;
+      margin: 0;
+      letter-spacing: -0.07em;
+    }
+
+    .platform {
+      font-size: clamp(22px, 2.5vw, 40px);
+      font-weight: 700;
+      margin: 0;
+      color: var(--sub);
+      text-transform: uppercase;
+      letter-spacing: -0.04em;
+    }
+
+    .action-btn {
+      border: none;
+      background: var(--accent);
+      color: #fff;
+      border-radius: 999px;
+      padding: 14px 20px;
+      font-size: 14px;
+      font-weight: 800;
+      cursor: pointer;
+      transition: background 0.15s ease, transform 0.15s ease;
+      letter-spacing: -0.02em;
+    }
+
+    .action-btn:hover,
+    .analyze-btn:hover,
+    .mini-btn:hover {
+      background: var(--accent-hover);
+      transform: translateY(-1px);
+    }
+
+    .divider {
+      height: 1px;
+      background: linear-gradient(90deg, transparent 0%, var(--accent) 12%, var(--accent) 88%, transparent 100%);
+      margin: 14px 0 22px;
+    }
+
+    .input-row {
+      display: grid;
+      grid-template-columns: 1fr 280px;
+      gap: 18px;
+      align-items: end;
+      margin-bottom: 12px;
+    }
+
+    .field label {
+      display: block;
+      font-size: 11px;
+      color: var(--sub);
+      margin-bottom: 10px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+    }
+
+    .field input {
+      width: 100%;
+      border: 1px solid rgba(17,17,17,0.05);
+      background: rgba(255,255,255,0.72);
+      border-radius: 999px;
+      padding: 20px 24px;
+      font-size: 17px;
+      color: var(--text);
+      outline: none;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.8);
+    }
+
+    .field input::placeholder { color: rgba(17,17,17,0.34); }
+
+    .analyze-btn {
+      border: none;
+      background: var(--accent);
+      color: #fff;
+      border-radius: 999px;
+      padding: 20px 22px;
+      font-size: clamp(24px, 2.3vw, 34px);
+      font-weight: 800;
+      cursor: pointer;
+      min-height: 76px;
+      transition: background 0.15s ease, transform 0.15s ease;
+      letter-spacing: -0.05em;
+    }
+
+    .utility-row {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 10px;
+      flex-wrap: wrap;
+    }
+
+    .readonly-badge {
+      display: none;
+      margin-bottom: 12px;
+      border-radius: 999px;
+      background: rgba(242,101,34,0.12);
+      padding: 10px 14px;
+      font-size: 12px;
+      font-weight: 800;
+      color: var(--accent);
+      width: fit-content;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .is-readonly .readonly-badge {
+      display: inline-flex;
+      align-items: center;
+    }
+
+    .is-readonly .input-row,
+    .is-readonly .utility-row,
+    .is-readonly #refreshBtn {
+      display: none;
+    }
+
+    .mini-btn {
+      border: 1px solid rgba(17,17,17,0.08);
+      background: rgba(255,255,255,0.65);
+      color: var(--text);
+      border-radius: 999px;
+      padding: 10px 14px;
+      font-size: 12px;
+      font-weight: 800;
+      cursor: pointer;
+      transition: background 0.15s ease, transform 0.15s ease, color 0.15s ease;
+      letter-spacing: -0.01em;
+    }
+
+    .mini-btn:hover {
+      color: #fff;
+      border-color: transparent;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 18px;
+      margin-top: 22px;
+    }
+
+    @media (min-width: 1280px) {
+      .grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+    }
+
+    .bucket-card {
+      background: rgba(255,255,255,0.52);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(17,17,17,0.05);
+      border-radius: 30px;
+      min-height: 360px;
+      padding: 22px;
+      box-shadow: var(--shadow);
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .bucket-card h3 {
+      margin: 0;
+      font-size: clamp(28px, 3vw, 42px);
+      line-height: 0.92;
+      font-weight: 800;
+      letter-spacing: -0.06em;
+    }
+
+    .bucket-sub {
+      font-size: 10px;
+      color: var(--sub);
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.18em;
+    }
+
+    .summary-box {
+      border-radius: 20px;
+      background: rgba(255,255,255,0.62);
+      padding: 16px 18px;
+      border: 1px solid rgba(17,17,17,0.04);
+    }
+
+    .summary-box p {
+      margin: 6px 0;
+      font-size: 13px;
+      line-height: 1.6;
+    }
+
+    .section-title {
+      font-size: 12px;
+      font-weight: 800;
+      margin: 0 0 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--sub);
+    }
+
+    .tag-wrap {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      border-radius: 999px;
+      background: rgba(242,101,34,0.1);
+      color: var(--accent);
+      padding: 7px 11px;
+      font-size: 11px;
+      font-weight: 800;
+      border: 1px solid rgba(242,101,34,0.12);
+    }
+
+    .compact-list {
+      margin: 0;
+      padding-left: 18px;
+      font-size: 13px;
+      line-height: 1.7;
+    }
+
+    .compact-list li + li { margin-top: 6px; }
+
+    .inline-link {
+      color: var(--accent);
+      text-decoration: underline;
+      text-underline-offset: 3px;
+      font-weight: 800;
+    }
+
+    .inline-delete {
+      margin-left: 8px;
+      border: none;
+      background: transparent;
+      color: var(--accent);
+      text-decoration: underline;
+      text-underline-offset: 3px;
+      font-size: 12px;
+      font-weight: 800;
+      cursor: pointer;
+      padding: 0;
+    }
+
+    .card-top {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: flex-start;
+    }
+
+    .count-chip {
+      border-radius: 999px;
+      background: var(--accent);
+      color: #fff;
+      padding: 8px 11px;
+      font-size: 11px;
+      font-weight: 800;
+      white-space: nowrap;
+      letter-spacing: 0.04em;
+    }
+
+    .status-box {
+      margin-top: 18px;
+      background: rgba(255,255,255,0.54);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(17,17,17,0.05);
+      border-radius: 28px;
+      padding: 20px 22px;
+      box-shadow: var(--shadow);
+    }
+
+    .status-box h2 {
+      margin: 0 0 10px;
+      font-size: clamp(24px, 2.5vw, 34px);
+      line-height: 0.95;
+      letter-spacing: -0.05em;
+    }
+
+    .status-box p {
+      margin: 0;
+      font-size: 14px;
+      color: var(--sub);
+      line-height: 1.7;
+    }
+
+    .notice-list {
+      margin: 10px 0 0;
+      padding-left: 18px;
+      font-size: 13px;
+      line-height: 1.75;
+    }
+
+    .compare-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 14px;
+    }
+
+    @media (min-width: 1280px) {
+      .compare-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+    }
+
+    .compare-item,
+    .direction-item {
+      border-radius: 20px;
+      background: rgba(255,255,255,0.6);
+      border: 1px solid rgba(17,17,17,0.04);
+      padding: 14px 16px;
+    }
+
+    .compare-item h3,
+    .direction-item h3 {
+      margin: 0 0 8px;
+      font-size: 18px;
+      line-height: 1.05;
+      letter-spacing: -0.04em;
+    }
+
+    .compare-item p,
+    .direction-item p {
+      margin: 4px 0;
+      font-size: 13px;
+      line-height: 1.6;
+      color: var(--text);
+    }
+
+    .direction-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 14px;
+    }
+
+    .empty {
+      margin-top: auto;
+      border-radius: 20px;
+      background: rgba(255,255,255,0.5);
+      color: var(--sub);
+      padding: 18px;
+      font-size: 13px;
+      line-height: 1.65;
+      border: 1px dashed rgba(17,17,17,0.08);
+    }
+
+    .channel-list-wrap {
+      display: none;
+      margin-top: 10px;
+    }
+
+    @media (max-width: 1080px) {
+      .direction-grid { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 920px) {
+      .topbar, .input-row, .grid, .compare-grid { grid-template-columns: 1fr; }
+      .analyze-btn { min-height: 72px; }
+      .platform { justify-self: start; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="topbar">
+      <h1 class="brand">hana 채널 분석</h1>
+      <h2 class="platform">Youtube</h2>
+      <button class="action-btn" id="refreshBtn" type="button">새로고침</button>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="input-row">
+      <div class="field">
+        <label for="youtubeHandleInput">유튜브 채널 링크 또는 @</label>
+        <input id="youtubeHandleInput" type="text" placeholder="https://www.youtube.com/@channelname 또는 @channelname" />
+      </div>
+      <button class="analyze-btn" id="fetchYoutubeBtn" type="button">분석하기</button>
+    </div>
+
+    <div class="utility-row">
+      <button class="mini-btn" id="saveBtn" type="button">저장</button>
+      <button class="mini-btn" id="loadBtn" type="button">불러오기</button>
+      <button class="mini-btn" id="clearBtn" type="button">전체 초기화</button>
+      <button class="mini-btn" id="shareBtn" type="button">공유 링크 만들기</button>
+    </div>
+
+    <div class="divider"></div>
+
+    <div id="readonlyBadge" class="readonly-badge">읽기 전용 공유본입니다</div>
+
+    <div id="youtubeFetchResult" class="status-box">
+      <h2>분석 대기</h2>
+      <p>채널을 넣으면 API로 최신 데이터를 불러오고, 구독자 규모별 5개 카드에 자동으로 반영합니다.</p>
+    </div>
+
+    <div id="comparisonBox" class="status-box">
+      <h2>5개 집단 비교</h2>
+      <p>아직 비교할 데이터가 없습니다.</p>
+    </div>
+
+    <div id="directionBox" class="status-box">
+      <h2>내 채널 방향 후보</h2>
+      <p>아직 방향 후보를 계산할 데이터가 없습니다.</p>
+    </div>
+
+    <div id="twoWeekBox" class="status-box">
+      <h2>최근 2주 핵심 단어</h2>
+      <p>아직 분석된 데이터가 없습니다.</p>
+    </div>
+
+    <div id="noticeBox" class="status-box">
+      <h2>특이사항 안내</h2>
+      <p>아직 특이사항이 없습니다.</p>
+    </div>
+
+    <div id="bucketGrid" class="grid"></div>
+  </div>
+
+  <script>
+    const API_KEY = "AIzaSyBvNgABKDyZeQVB5G7n4Xptqm43zTWu9PE";
+    const channels = [];
+    const notices = [];
+    let isReadOnlyShare = false;
+    const els = {
+      youtubeHandleInput: document.getElementById('youtubeHandleInput'),
+      youtubeFetchResult: document.getElementById('youtubeFetchResult'),
+      comparisonBox: document.getElementById('comparisonBox'),
+      directionBox: document.getElementById('directionBox'),
+      twoWeekBox: document.getElementById('twoWeekBox'),
+      noticeBox: document.getElementById('noticeBox'),
+      bucketGrid: document.getElementById('bucketGrid')
+    };
+    const bucketOrder = ['5,000명 이하', '5,001 ~ 10,000명', '10,001 ~ 50,000명', '50,001 ~ 99,999명', '100,000명 이상'];
+    const stopwords = new Set(['브이로그', 'vlog', '영상', '채널', '공개', '일상', '리뷰', 'shorts', '쇼츠', 'youtube', '유튜브']);
+
+    function escapeHtml(str) {
+      return String(str)
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#039;');
+    }
+
+    function numberFormat(num) {
+      const value = Number(num || 0);
+      if (value >= 100000000) return (value / 100000000).toFixed(1) + '억';
+      if (value >= 10000) return (value / 10000).toFixed(1) + '만';
+      return value.toLocaleString('ko-KR');
+    }
+
+    function slugify(label) {
+      return label
+        .replaceAll(',', '')
+        .replaceAll(' ', '-')
+        .replaceAll('~', 'to')
+        .replaceAll('명', '')
+        .replaceAll('이하', 'under')
+        .replaceAll('이상', 'over');
+    }
+
+    function extractHandle(value) {
+      const trimmed = String(value || '').trim();
+      const match = trimmed.match(/youtube\.com\/@([^/?#]+)/i);
+      if (match) return match[1];
+      return trimmed.replace(/^@/, '').trim();
+    }
+
+    function getBucketLabel(subscriberCount) {
+      const value = Number(subscriberCount || 0);
+      if (value <= 5000) return '5,000명 이하';
+      if (value <= 10000) return '5,001 ~ 10,000명';
+      if (value <= 50000) return '10,001 ~ 50,000명';
+      if (value <= 99999) return '50,001 ~ 99,999명';
+      if (value >= 100000) return '100,000명 이상';
+      return '분류 제외';
+    }
+
+    function tokenize(text) {
+      return String(text || '')
+        .toLowerCase()
+        .replace(/https?:\/\/\S+/g, ' ')
+        .replace(/[^a-z0-9가-힣\s]/g, ' ')
+        .split(/\s+/)
+        .map(function(v) { return v.trim(); })
+        .filter(function(v) { return v.length > 1 && !stopwords.has(v); });
+    }
+
+    function keywordCount(items) {
+      const map = {};
+      items.forEach(function(item) { map[item] = (map[item] || 0) + 1; });
+      return Object.entries(map).sort(function(a, b) { return b[1] - a[1]; });
+    }
+
+    function topKeywords(items, limit) {
+      return keywordCount(items).slice(0, limit || 5).map(function(entry) { return entry[0]; });
+    }
+
+    function inferPersonaFromTexts(texts) {
+      const joined = texts.join(' ');
+      let age = '20대 전반~중반';
+      if (/직장인|회사|출근|퇴근|월급/.test(joined)) age = '20대 중후반';
+      if (/재테크|업무|생산성|정리|루틴/.test(joined)) age = '20대 후반~30대 초반';
+      const interests = [];
+      if (/직장인|회사|출근|퇴근/.test(joined)) interests.push('직장인 현실과 일상 공감');
+      if (/월급|소비|돈|지출|절약/.test(joined)) interests.push('현실 소비와 돈 관리');
+      if (/루틴|습관|자기관리|회복/.test(joined)) interests.push('자기관리와 회복 루틴');
+      if (/브이로그|하루|일상/.test(joined)) interests.push('관찰형 브이로그와 서사형 콘텐츠');
+      if (/패션|코디|뷰티/.test(joined)) interests.push('패션·뷰티 라이프스타일');
+      if (!interests.length) interests.push('현실 공감형 라이프스타일 콘텐츠');
+      return { age: age, interests: interests.slice(0, 3) };
+    }
+
+    function suggestContentFromTopVideos(videos, persona) {
+      const allWords = videos.flatMap(function(video) { return tokenize(video.title); });
+      const topics = topKeywords(allWords, 4);
+      const suggestions = [];
+      if (topics.some(function(v) { return /직장인|회사|출근|퇴근/.test(v); })) suggestions.push('직장인 상황 공감 + 해결 포인트를 함께 주는 콘텐츠');
+      if (topics.some(function(v) { return /소비|월급|돈|지출/.test(v); })) suggestions.push('월급·소비·지출 같은 현실 돈 이야기를 감정과 함께 다루는 콘텐츠');
+      if (topics.some(function(v) { return /루틴|습관|정리|회복/.test(v); })) suggestions.push('퇴근 후 회복 루틴, 습관, 정리형 콘텐츠');
+      if (topics.some(function(v) { return /패션|코디|뷰티/.test(v); })) suggestions.push('일상 맥락 안에서 소비나 스타일을 보여주는 라이프스타일 콘텐츠');
+      if (!suggestions.length) suggestions.push(persona.interests[0] + ' 중심의 공감형 콘텐츠를 더 뾰족하게 만드는 방향');
+      return { topics: topics, suggestions: suggestions.slice(0, 3) };
+    }
+
+    function isWithinFiveMonths(dateString) {
+      if (!dateString) return false;
+      const published = new Date(dateString);
+      if (Number.isNaN(published.getTime())) return false;
+      const cutoff = new Date();
+      cutoff.setMonth(cutoff.getMonth() - 5);
+      return published >= cutoff;
+    }
+
+    function detectContentType(title) {
+      const t = String(title || '');
+      if (/브이로그|vlog|하루|일상/.test(t)) return '브이로그';
+      if (/루틴|습관|정리|방법|팁|추천|리스트/.test(t)) return '정보/루틴';
+      if (/소비|월급|돈|지출|절약|가계부/.test(t)) return '소비/돈';
+      if (/패션|코디|옷|뷰티|메이크업/.test(t)) return '패션/뷰티';
+      if (/직장인|회사|출근|퇴근/.test(t)) return '직장인 공감';
+      return '기타';
+    }
+
+    function getRisingTypeText(videos) {
+      const recentVideos = videos.filter(function(video) { return isWithinFiveMonths(video.publishedAt); });
+      const types = recentVideos.map(function(video) { return detectContentType(video.title); });
+      const top = topKeywords(types, 2);
+      return top.length ? top.join(', ') : '데이터 부족';
+    }
+
+    function isWithinTwoWeeks(dateString) {
+      if (!dateString) return false;
+      const published = new Date(dateString);
+      if (Number.isNaN(published.getTime())) return false;
+      const cutoff = new Date();
+      cutoff.setDate(cutoff.getDate() - 14);
+      return published >= cutoff;
+    }
+
+    function getTwoWeekWords(videos) {
+      const recentVideos = videos.filter(function(video) { return isWithinTwoWeeks(video.publishedAt); });
+      const words = topKeywords(recentVideos.flatMap(function(video) { return tokenize(video.title); }), 4);
+      return words;
+    }
+
+    function getTwoWeekSuggestion(words) {
+      if (!words.length) return '최근 2주 데이터가 적어 추천 문구를 만들기 어렵습니다.';
+      return words.join(', ') + ' 키워드를 앞단 후킹에 두고 짧고 분명한 상황형 제목으로 확장해보세요.';
+    }
+
+    function buildChannelsUrl(handle) {
+      const url = new URL('https://www.googleapis.com/youtube/v3/channels');
+      url.searchParams.set('part', 'snippet,statistics,contentDetails');
+      url.searchParams.set('forHandle', handle);
+      url.searchParams.set('key', API_KEY);
+      return url.toString();
+    }
+
+    function buildPlaylistUrl(playlistId, maxResults) {
+      const url = new URL('https://www.googleapis.com/youtube/v3/playlistItems');
+      url.searchParams.set('part', 'snippet,contentDetails');
+      url.searchParams.set('playlistId', playlistId);
+      url.searchParams.set('maxResults', String(maxResults || 25));
+      url.searchParams.set('key', API_KEY);
+      return url.toString();
+    }
+
+    function buildVideosUrl(videoIds) {
+      const url = new URL('https://www.googleapis.com/youtube/v3/videos');
+      url.searchParams.set('part', 'snippet,statistics');
+      url.searchParams.set('id', videoIds.join(','));
+      url.searchParams.set('key', API_KEY);
+      return url.toString();
+    }
+
+    async function fetchJson(url) {
+      const res = await fetch(url);
+      if (!res.ok) throw new Error('유튜브 데이터를 불러오지 못했습니다.');
+      return await res.json();
+    }
+
+    function setReadOnlyMode(enabled) {
+      isReadOnlyShare = enabled;
+      document.body.classList.toggle('is-readonly', enabled);
+    }
+
+    function getSharePayload() {
+      return {
+        channels: channels,
+        notices: notices,
+        sharedAt: new Date().toISOString()
+      };
+    }
+
+    function encodeSharePayload(payload) {
+      return encodeURIComponent(btoa(unescape(encodeURIComponent(JSON.stringify(payload)))));
+    }
+
+    function decodeSharePayload(value) {
+      return JSON.parse(decodeURIComponent(escape(atob(decodeURIComponent(value)))));
+    }
+
+    function loadSharedStateFromUrl() {
+      const hash = window.location.hash || '';
+      if (!hash.startsWith('#shared=')) return false;
+      try {
+        const raw = hash.slice('#shared='.length);
+        const data = decodeSharePayload(raw);
+        channels.length = 0;
+        notices.length = 0;
+        (data.channels || []).forEach(function(item) { channels.push(item); });
+        (data.notices || []).forEach(function(item) { notices.push(item); });
+        setReadOnlyMode(true);
+        renderBuckets();
+        els.youtubeFetchResult.innerHTML = '<h2>공유본 불러오기 완료</h2><p>저장된 분석 결과를 읽기 전용으로 표시하고 있습니다.</p>';
+        return true;
+      } catch (error) {
+        setReadOnlyMode(false);
+        els.youtubeFetchResult.innerHTML = '<h2>공유본 오류</h2><p>공유 링크 데이터를 읽지 못했습니다.</p>';
+        return false;
+      }
+    }
+
+    function copyShareLink() {
+      if (!channels.length) {
+        alert('공유할 데이터가 없습니다. 먼저 채널을 분석해주세요.');
+        return;
+      }
+      const payload = getSharePayload();
+      const shareUrl = window.location.origin + window.location.pathname + '#shared=' + encodeSharePayload(payload);
+      navigator.clipboard.writeText(shareUrl).then(function() {
+        alert('공유 링크가 복사되었습니다. 이 링크는 읽기 전용으로 열립니다.');
+      }).catch(function() {
+        prompt('이 링크를 복사해주세요.', shareUrl);
+      });
+    }
+
+    function renderFetchResult(channel) {
+      els.youtubeFetchResult.innerHTML = '<h2>' + escapeHtml(channel.title) + '</h2><p>구독자 ' + escapeHtml(numberFormat(channel.subscriberCount)) + ' · ' + escapeHtml(channel.bucket) + ' · 최근 주제 ' + escapeHtml((channel.recentThemes || []).join(', ') || '분석 없음') + '</p>';
+    }
+
+    function pushNotice(message) {
+      notices.unshift({ message: message, createdAt: new Date().toISOString() });
+      if (notices.length > 12) notices.length = 12;
+    }
+
+    function buildGroupedBuckets() {
+      const grouped = Object.fromEntries(bucketOrder.map(function(label) { return [label, []]; }));
+      channels.forEach(function(channel) {
+        if (grouped[channel.bucket]) {
+          grouped[channel.bucket].push(channel);
+        }
+      });
+      return grouped;
+    }
+
+    function buildDirectionCandidates() {
+      const allVideos = channels.flatMap(function(c) { return c.allRecentVideos || []; });
+      const allWords = topKeywords(allVideos.flatMap(function(v) { return tokenize(v.title); }), 8);
+      const twoWeekWords = getTwoWeekWords(allVideos);
+      const risingTypes = getRisingTypeText(allVideos);
+
+      const hasWork = allWords.some(function(word) { return /직장인|회사|출근|퇴근/.test(word); }) || /직장인|회사|출근|퇴근/.test(twoWeekWords.join(' '));
+      const hasMoney = allWords.some(function(word) { return /월급|소비|돈|지출|절약/.test(word); }) || /월급|소비|돈|지출|절약/.test(twoWeekWords.join(' '));
+      const hasRoutine = allWords.some(function(word) { return /루틴|습관|정리|회복|자기관리/.test(word); }) || /루틴|습관|정리|회복|자기관리/.test(twoWeekWords.join(' '));
+      const hasStyle = allWords.some(function(word) { return /패션|코디|뷰티|옷/.test(word); }) || /패션|코디|뷰티|옷/.test(twoWeekWords.join(' '));
+
+      const candidates = [
+        {
+          title: '직장인 현실 공감형',
+          reason: '최근 반복되는 키워드와 급상승 패턴을 보면 공감형 상황 제목이 가장 무난하게 확장됩니다.',
+          fit: hasWork ? '높음' : '중간',
+          sampleTitles: [
+            '출근하기 싫은 날 직장인이 하는 생각',
+            '퇴근 직후 아무것도 하기 싫은 이유',
+            '회사 다니며 유독 지치는 요일 이야기'
+          ]
+        },
+        {
+          title: '직장인 소비·라이프형',
+          reason: '소비·월급·지출 키워드가 보이면 현실적인 돈 이야기와 일상 선택이 반응을 만들기 좋습니다.',
+          fit: hasMoney ? '높음' : '중간',
+          sampleTitles: [
+            '월급날 꼭 하게 되는 현실 소비',
+            '직장인이 은근 자주 쓰는 지출 5가지',
+            '퇴근 후 나를 위해 돈 쓰는 순간들'
+          ]
+        },
+        {
+          title: '퇴근 후 회복·루틴형',
+          reason: '최근 많아진 콘텐츠 유형이 ' + risingTypes + '로 잡히면 루틴·회복형 포맷이 안정적으로 이어질 가능성이 큽니다.',
+          fit: hasRoutine || hasStyle ? '높음' : '중간',
+          sampleTitles: [
+            '퇴근 후 나를 살리는 루틴 3가지',
+            '회사 다니며 다시 회복하는 방법',
+            '평일 저녁을 덜 무기력하게 보내는 습관'
+          ]
+        }
+      ];
+
+      return candidates;
+    }
+
+    function renderMetaPanels() {
+      const grouped = buildGroupedBuckets();
+      const risingChannels = channels.filter(function(c) {
+        return c.riseSignal && (c.riseSignal.subscriberRise || c.riseSignal.viewRise);
+      });
+
+      const allVideosGlobal = channels.flatMap(function(c){ return c.allRecentVideos || []; });
+      const twoWeekWordsGlobal = getTwoWeekWords(allVideosGlobal);
+
+      if (twoWeekWordsGlobal.length) {
+        els.twoWeekBox.innerHTML = '<h2>최근 2주 핵심 단어</h2><p>' + escapeHtml(twoWeekWordsGlobal.join(', ')) + '</p>';
+      } else {
+        els.twoWeekBox.innerHTML = '<h2>최근 2주 핵심 단어</h2><p>최근 2주 데이터가 아직 없습니다.</p>';
+      }
+
+      const compareHtml = bucketOrder.map(function(label) {
+        const items = grouped[label] || [];
+        if (!items.length) {
+          return '<div class="compare-item"><h3>' + escapeHtml(label) + '</h3><p>채널 없음</p></div>';
+        }
+
+        const persona = inferPersonaFromTexts(items.flatMap(function(item) {
+          return [item.description].concat(item.recentThemes || [], (item.topVideos || []).map(function(v) { return v.title; }));
+        }));
+        const avgSubs = Math.round(items.reduce(function(sum, item) { return sum + item.subscriberCount; }, 0) / items.length);
+        const mergedTopVideos = items
+          .flatMap(function(item) { return item.topVideos || []; })
+          .filter(function(video) { return isWithinFiveMonths(video.publishedAt); })
+          .sort(function(a, b) { return (b.viewCount || 0) - (a.viewCount || 0); })
+          .slice(0, 5);
+        const topTopic = topKeywords(mergedTopVideos.flatMap(function(video) { return tokenize(video.title); }), 3);
+        const recommendation = suggestContentFromTopVideos(mergedTopVideos, persona);
+
+        return '<div class="compare-item">'
+          + '<h3>' + escapeHtml(label) + '</h3>'
+          + '<p><strong>채널 수:</strong> ' + items.length + '</p>'
+          + '<p><strong>평균 구독자:</strong> ' + escapeHtml(numberFormat(avgSubs)) + '</p>'
+          + '<p><strong>공통 페르소나:</strong> ' + escapeHtml(persona.age) + ' / ' + escapeHtml(persona.interests.join(', ')) + '</p>'
+          + '<p><strong>잘되는 키워드:</strong> ' + escapeHtml(topTopic.join(', ') || '데이터 부족') + '</p>'
+          + '<p><strong>추천 방향:</strong> ' + escapeHtml(recommendation.suggestions[0] || '공통 패턴을 더 수집해보세요.') + '</p>'
+          + '</div>';
+      }).join('');
+
+      els.comparisonBox.innerHTML = '<h2>5개 집단 비교</h2><div class="compare-grid">' + compareHtml + '</div>'
+
+      if (!channels.length) {
+        els.directionBox.innerHTML = '<h2>내 채널 방향 후보</h2><p>아직 방향 후보를 계산할 데이터가 없습니다.</p>';
+      } else {
+        const candidates = buildDirectionCandidates();
+        els.directionBox.innerHTML = '<h2>내 채널 방향 후보</h2><div class="direction-grid">' + candidates.map(function(candidate) {
+          return '<div class="direction-item">'
+            + '<h3>' + escapeHtml(candidate.title) + '</h3>'
+            + '<p><strong>추천도:</strong> ' + escapeHtml(candidate.fit) + '</p>'
+            + '<p>' + escapeHtml(candidate.reason) + '</p>'
+            + '<ul class="compact-list">' + candidate.sampleTitles.map(function(title) { return '<li>' + escapeHtml(title) + '</li>'; }).join('') + '</ul>'
+            + '</div>';
+        }).join('') + '</div>';
+      }
+
+      let risingHtml = '';
+      if (risingChannels.length) {
+        risingHtml = '<h2>최근 2주 급상승 채널 감지</h2><ul class="notice-list">' + risingChannels.map(function(channel) {
+          const chunks = [];
+          if (channel.riseSignal.subscriberRise) chunks.push('구독자 급상승');
+          if (channel.riseSignal.viewRise) chunks.push('조회수 급상승');
+          return '<li>' + escapeHtml(channel.title) + ' · ' + escapeHtml(chunks.join(' / ')) + '</li>';
+        }).join('') + '</ul>';
+      } else {
+        risingHtml = '<h2>최근 2주 급상승 채널 감지</h2><p>아직 감지된 급상승 채널이 없습니다.</p>';
+      }
+
+      if (!notices.length) {
+        els.noticeBox.innerHTML = risingHtml + '<h2 style="margin-top:18px">특이사항 안내</h2><p>아직 특이사항이 없습니다.</p>';
+      } else {
+        els.noticeBox.innerHTML = risingHtml + '<h2 style="margin-top:18px">특이사항 안내</h2><ul class="notice-list">' + notices.map(function(item) {
+          return '<li>' + escapeHtml(item.message) + '</li>';
+        }).join('') + '</ul>';
+      }
+
+      const html = bucketOrder.map(function(label) {
+        const items = grouped[label] || [];
+        const bucketId = slugify(label);
+
+        if (!items.length) {
+          return '<div class="bucket-card"><div class="card-top"><div><div class="bucket-sub">Bucket</div><h3>' + escapeHtml(label) + '</h3></div><div class="count-chip">0개</div></div><div class="empty">아직 채널이 없습니다.</div></div>';
+        }
+
+        const persona = inferPersonaFromTexts(items.flatMap(function(item) {
+          return [item.description].concat(item.recentThemes || [], (item.topVideos || []).map(function(v) { return v.title; }));
+        }));
+
+        const avgSubs = Math.round(items.reduce(function(sum, item) { return sum + item.subscriberCount; }, 0) / items.length);
+
+        const mergedTopVideos = items
+          .flatMap(function(item) { return item.topVideos || []; })
+          .filter(function(video) { return isWithinFiveMonths(video.publishedAt); })
+          .sort(function(a, b) { return (b.viewCount || 0) - (a.viewCount || 0); })
+          .slice(0, 5);
+
+        const recommendation = suggestContentFromTopVideos(mergedTopVideos, persona);
+        const allVideos = items.flatMap(function(item) { return item.allRecentVideos || []; });
+        const risingTypeText = getRisingTypeText(allVideos);
+        const twoWeekWords = getTwoWeekWords(allVideos);
+        const twoWeekSuggestion = getTwoWeekSuggestion(twoWeekWords);
+
+        const channelItems = items.map(function(channel) {
+          return '<li>'
+            + escapeHtml(channel.title) + ' · ' + escapeHtml(numberFormat(channel.subscriberCount))
+            + ' <a class="inline-link" href="' + escapeHtml(channel.url) + '" target="_blank" rel="noopener noreferrer">보기</a>'
+            + '<button class="inline-delete" type="button" onclick="removeChannel(\'' + escapeHtml(channel.handle) + '\')">삭제</button>'
+            + '</li>';
+        }).join('');
+
+        return '<div class="bucket-card">'
+          + '<div class="card-top"><div><div class="bucket-sub">Bucket</div><h3>' + escapeHtml(label) + '</h3></div><div class="count-chip">' + items.length + '개</div></div>'
+          + '<div class="summary-box"><p><strong>공통 페르소나</strong></p><p>나이: ' + escapeHtml(persona.age) + '</p><p>관심사: ' + escapeHtml(persona.interests.join(', ')) + '</p><p>평균 구독자: ' + escapeHtml(numberFormat(avgSubs)) + '</p><p>최근 많아진 콘텐츠 유형: ' + escapeHtml(risingTypeText) + '</p><p>최근 2주 핵심 단어: ' + escapeHtml(twoWeekWords.join(', ') || '데이터 부족') + '</p></div>'
+          + '<div><p class="section-title">콘텐츠 제안</p><div class="tag-wrap">' + recommendation.topics.map(function(item) { return '<span class="tag">' + escapeHtml(item) + '</span>'; }).join('') + '</div><ul class="compact-list">' + recommendation.suggestions.map(function(item) { return '<li>' + escapeHtml(item) + '</li>'; }).join('') + '<li>' + escapeHtml(twoWeekSuggestion) + '</li></ul></div>'
+          + '<div><p class="section-title">최근 5개월 내 잘된 상위 콘텐츠 5개</p><ul class="compact-list">' + mergedTopVideos.map(function(video) { return '<li><a class="inline-link" href="' + escapeHtml(video.link) + '" target="_blank" rel="noopener noreferrer">' + escapeHtml(video.title) + '</a> · ' + escapeHtml(numberFormat(video.viewCount || 0)) + '회</li>'; }).join('') + '</ul></div>'
+          + '<div><p class="section-title">채널 목록</p><button class="mini-btn" type="button" onclick="toggleChannels(\'' + bucketId + '\')">채널 보기</button><div class="channel-list-wrap" id="channel-list-' + bucketId + '"><ul class="compact-list">' + channelItems + '</ul></div></div>'
+          + '</div>';
+      }).join('');
+
+      els.bucketGrid.innerHTML = html;
+    }
+
+    function renderBuckets() {
+      renderMetaPanels();
+    }
+
+    async function fetchYoutubeChannelData() {
+      const handle = extractHandle(els.youtubeHandleInput.value);
+      if (!handle) return;
+
+      try {
+        els.youtubeFetchResult.innerHTML = '<h2>분석 중</h2><p>유튜브 데이터를 불러오는 중입니다.</p>';
+
+        const channelData = await fetchJson(buildChannelsUrl(handle));
+        if (!channelData.items || !channelData.items.length) {
+          throw new Error('채널을 찾을 수 없습니다.');
+        }
+
+        const channel = channelData.items[0];
+        const subscriberCount = Number((channel.statistics && channel.statistics.subscriberCount) || 0);
+        const bucket = getBucketLabel(subscriberCount);
+
+        if (bucket === '분류 제외') {
+          throw new Error('현재 설정된 구독자 범위에 해당하지 않는 채널입니다.');
+        }
+
+        const uploadsPlaylistId = channel.contentDetails && channel.contentDetails.relatedPlaylists && channel.contentDetails.relatedPlaylists.uploads;
+
+        let recentThemes = [];
+        let allRecentVideos = [];
+        let topVideos = [];
+
+        if (uploadsPlaylistId) {
+          const playlistData = await fetchJson(buildPlaylistUrl(uploadsPlaylistId, 12));
+          const playlistItems = playlistData.items || [];
+
+          const videoIds = playlistItems
+            .map(function(item){ return item.contentDetails && item.contentDetails.videoId; })
+            .filter(Boolean);
+
+          const titles = playlistItems
+            .map(function(item){ return (item.snippet && item.snippet.title) || ''; })
+            .filter(Boolean);
+
+          recentThemes = topKeywords(titles.flatMap(tokenize), 5);
+
+          if (videoIds.length) {
+            const videosData = await fetchJson(buildVideosUrl(videoIds));
+
+            allRecentVideos = (videosData.items || []).map(function(v){
+              return {
+                title: (v.snippet && v.snippet.title) || '',
+                viewCount: Number((v.statistics && v.statistics.viewCount) || 0),
+                link: 'https://www.youtube.com/watch?v=' + v.id,
+                publishedAt: (v.snippet && v.snippet.publishedAt) || ''
+              };
+            });
+
+            topVideos = allRecentVideos
+              .filter(function(v){ return isWithinFiveMonths(v.publishedAt); })
+              .sort(function(a,b){ return b.viewCount - a.viewCount; })
+              .slice(0,5);
+          }
+        }
+
+        const twoWeekRecentVideos = allRecentVideos.filter(function(v) { return isWithinTwoWeeks(v.publishedAt); });
+        const payload = {
+          handle: handle,
+          title: (channel.snippet && channel.snippet.title) || handle,
+          description: (channel.snippet && channel.snippet.description) || '',
+          subscriberCount: subscriberCount,
+          bucket: bucket,
+          url: 'https://www.youtube.com/@' + handle,
+          recentThemes: recentThemes,
+          topVideos: topVideos,
+          allRecentVideos: allRecentVideos,
+          riseSignal: {
+            subscriberRise: false,
+            viewRise: false,
+            twoWeekViews: twoWeekRecentVideos.reduce(function(sum, v) { return sum + (v.viewCount || 0); }, 0)
+          }
+        };
+
+        const existingIndex = channels.findIndex(function(c){ return c.handle === handle; });
+
+        if (existingIndex >= 0) {
+          const previous = channels[existingIndex];
+          const diff = subscriberCount - Number(previous.subscriberCount || 0);
+          const prevValue = Number(previous.subscriberCount || 0);
+          const rate = prevValue > 0 ? (diff / prevValue) * 100 : 0;
+
+          const previousTwoWeekViews = Number((previous.riseSignal && previous.riseSignal.twoWeekViews) || 0);
+          const currentTwoWeekViews = Number(payload.riseSignal.twoWeekViews || 0);
+          const viewRate = previousTwoWeekViews > 0 ? (currentTwoWeekViews - previousTwoWeekViews) / previousTwoWeekViews : 0;
+
+          payload.riseSignal.subscriberRise = diff >= 1000 || rate >= 20;
+          payload.riseSignal.viewRise = currentTwoWeekViews > 0 && (currentTwoWeekViews - previousTwoWeekViews >= 50000 || viewRate >= 0.5);
+
+          channels[existingIndex] = payload;
+
+          if (Math.abs(diff) >= 1000 || Math.abs(rate) >= 20) {
+            const direction = diff > 0 ? '상승' : '하락';
+            pushNotice(payload.title + ' 채널의 구독자가 ' + direction + '했습니다. (' + numberFormat(prevValue) + ' → ' + numberFormat(subscriberCount) + ')');
+          }
+          if (payload.riseSignal.viewRise) {
+            pushNotice(payload.title + ' 채널의 최근 2주 조회수가 급상승했습니다. (' + numberFormat(previousTwoWeekViews) + ' → ' + numberFormat(currentTwoWeekViews) + ')');
+          }
+        } else {
+          channels.push(payload);
+        }
+
+        renderFetchResult(payload);
+        renderBuckets();
+        els.youtubeHandleInput.value = '';
+
+      } catch(error) {
+        els.youtubeFetchResult.innerHTML = '<h2>오류</h2><p>' + escapeHtml(error.message || '유튜브 데이터를 불러오지 못했습니다.') + '</p>';
+      }
+    }
+
+    async function refreshAll() {
+      if (!channels.length) {
+        alert('새로고침할 채널이 없습니다.');
+        return;
+      }
+      els.youtubeFetchResult.innerHTML = '<h2>새로고침 중</h2><p>저장된 채널들을 최신 데이터로 다시 분석하고 있습니다.</p>';
+      const handles = channels.map(function(item) { return item.handle; });
+      const previous = channels.slice();
+      channels.length = 0;
+
+      for (const handle of handles) {
+        try {
+          const channelData = await fetchJson(buildChannelsUrl(handle));
+          if (!channelData.items || !channelData.items.length) continue;
+          const channel = channelData.items[0];
+          const subscriberCount = Number((channel.statistics && channel.statistics.subscriberCount) || 0);
+          const bucket = getBucketLabel(subscriberCount);
+          if (bucket === '분류 제외') continue;
+
+          const uploadsPlaylistId = channel.contentDetails && channel.contentDetails.relatedPlaylists && channel.contentDetails.relatedPlaylists.uploads;
+          let recentThemes = [];
+          let allRecentVideos = [];
+          let topVideos = [];
+
+          if (uploadsPlaylistId) {
+            const playlistData = await fetchJson(buildPlaylistUrl(uploadsPlaylistId, 10));
+            const playlistItems = playlistData.items || [];
+            const videoIds = playlistItems.map(function(item) { return item.contentDetails && item.contentDetails.videoId; }).filter(Boolean);
+            const recentTitles = playlistItems.map(function(item) { return (item.snippet && item.snippet.title) || ''; }).filter(Boolean);
+            recentThemes = topKeywords(recentTitles.flatMap(tokenize), 5);
+            if (videoIds.length) {
+              const videosData = await fetchJson(buildVideosUrl(videoIds));
+              allRecentVideos = (videosData.items || []).map(function(item) {
+                return {
+                  title: (item.snippet && item.snippet.title) || '',
+                  viewCount: Number((item.statistics && item.statistics.viewCount) || 0),
+                  link: 'https://www.youtube.com/watch?v=' + item.id,
+                  publishedAt: (item.snippet && item.snippet.publishedAt) || ''
+                };
+              });
+              topVideos = allRecentVideos
+                .filter(function(video) { return isWithinFiveMonths(video.publishedAt); })
+                .sort(function(a, b) { return b.viewCount - a.viewCount; })
+                .slice(0, 5);
+            }
+          }
+
+          const twoWeekRecentVideos = allRecentVideos.filter(function(v) { return isWithinTwoWeeks(v.publishedAt); });
+          const refreshedPayload = {
+            handle: handle,
+            title: (channel.snippet && channel.snippet.title) || handle,
+            description: (channel.snippet && channel.snippet.description) || '',
+            subscriberCount: subscriberCount,
+            bucket: bucket,
+            url: 'https://www.youtube.com/@' + handle,
+            recentThemes: recentThemes,
+            topVideos: topVideos,
+            allRecentVideos: allRecentVideos,
+            riseSignal: {
+              subscriberRise: false,
+              viewRise: false,
+              twoWeekViews: twoWeekRecentVideos.reduce(function(sum, v) { return sum + (v.viewCount || 0); }, 0)
+            }
+          };
+          channels.push(refreshedPayload);
+          const previousItem = previous.find(function(item) { return item.handle === handle; });
+          if (previousItem) {
+            const diff = subscriberCount - Number(previousItem.subscriberCount || 0);
+            const prevValue = Number(previousItem.subscriberCount || 0);
+            const rate = prevValue > 0 ? (diff / prevValue) * 100 : 0;
+            const previousTwoWeekViews = Number((previousItem.riseSignal && previousItem.riseSignal.twoWeekViews) || 0);
+            const currentTwoWeekViews = Number(refreshedPayload.riseSignal.twoWeekViews || 0);
+            const viewRate = previousTwoWeekViews > 0 ? (currentTwoWeekViews - previousTwoWeekViews) / previousTwoWeekViews : 0;
+
+            refreshedPayload.riseSignal.subscriberRise = diff >= 1000 || rate >= 20;
+            refreshedPayload.riseSignal.viewRise = currentTwoWeekViews > 0 && (currentTwoWeekViews - previousTwoWeekViews >= 50000 || viewRate >= 0.5);
+
+            if (Math.abs(diff) >= 1000 || Math.abs(rate) >= 20) {
+              const direction = diff > 0 ? '상승' : '하락';
+              pushNotice(refreshedPayload.title + ' 채널의 구독자가 ' + direction + '했습니다. (' + numberFormat(prevValue) + ' → ' + numberFormat(subscriberCount) + ')');
+            }
+            if (refreshedPayload.riseSignal.viewRise) {
+              pushNotice(refreshedPayload.title + ' 채널의 최근 2주 조회수가 급상승했습니다. (' + numberFormat(previousTwoWeekViews) + ' → ' + numberFormat(currentTwoWeekViews) + ')');
+            }
+          }
+        } catch (error) {
+          const oldItem = previous.find(function(item) { return item.handle === handle; });
+          if (oldItem) channels.push(oldItem);
+        }
+      }
+
+      renderBuckets();
+      els.youtubeFetchResult.innerHTML = '<h2>새로고침 완료</h2><p>저장된 채널 데이터를 최신 상태로 다시 불러왔습니다.</p>';
+    }
+
+    function saveData() {
+      if (isReadOnlyShare) return;
+
+      localStorage.setItem('hana-youtube-buckets', JSON.stringify({ channels: channels, notices: notices }));
+      alert('로컬 저장이 완료되었습니다.');
+    }
+
+    function loadData() {
+      if (isReadOnlyShare) return;
+
+      const raw = localStorage.getItem('hana-youtube-buckets');
+      if (!raw) {
+        alert('저장된 데이터가 없습니다.');
+        return;
+      }
+      const data = JSON.parse(raw);
+      channels.length = 0;
+      (data.channels || []).forEach(function(item) { channels.push(item); });
+      notices.length = 0;
+      (data.notices || []).forEach(function(item) { notices.push(item); });
+      renderBuckets();
+      els.youtubeFetchResult.innerHTML = '<h2>불러오기 완료</h2><p>저장된 채널 데이터를 불러왔습니다.</p>';
+    }
+
+    function clearAll() {
+      if (isReadOnlyShare) return;
+
+      if (!confirm('분석된 채널을 모두 초기화할까요?')) return;
+      channels.length = 0;
+      notices.length = 0;
+      renderBuckets();
+      els.youtubeFetchResult.innerHTML = '<h2>초기화 완료</h2><p>채널 데이터가 모두 비워졌습니다.</p>';
+    }
+
+    function removeChannel(handle) {
+      if (isReadOnlyShare) return;
+
+      const index = channels.findIndex(function(item) { return item.handle === handle; });
+      if (index >= 0) channels.splice(index, 1);
+      renderBuckets();
+    }
+
+    function toggleChannels(bucketId) {
+      const el = document.getElementById('channel-list-' + bucketId);
+      if (!el) return;
+      el.style.display = el.style.display === 'block' ? 'none' : 'block';
+    }
+
+    window.removeChannel = removeChannel;
+    window.toggleChannels = toggleChannels;
+
+    document.getElementById('fetchYoutubeBtn').addEventListener('click', fetchYoutubeChannelData);
+    document.getElementById('refreshBtn').addEventListener('click', refreshAll);
+    document.getElementById('saveBtn').addEventListener('click', saveData);
+    document.getElementById('loadBtn').addEventListener('click', loadData);
+    document.getElementById('clearBtn').addEventListener('click', clearAll);
+    document.getElementById('shareBtn').addEventListener('click', copyShareLink);
+
+    if (!loadSharedStateFromUrl()) {
+      const raw = localStorage.getItem('hana-youtube-buckets');
+      if (raw) {
+        try {
+          const data = JSON.parse(raw);
+          channels.length = 0;
+          (data.channels || []).forEach(function(item){ channels.push(item); });
+          notices.length = 0;
+          (data.notices || []).forEach(function(item){ notices.push(item); });
+        } catch(e) {}
+      }
+      renderBuckets();
+    }
+  </script>
+</body>
+</html>
